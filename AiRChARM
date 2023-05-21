@@ -1,0 +1,49 @@
+from qiskit import QuantumCircuit, Aer, execute
+import numpy as np
+
+def shor_parallel(n, a):
+    # Crear el circuito cuántico con 2n+1 qubits y 2n bits clásicos
+    qc = QuantumCircuit(2*n+1, 2*n)
+
+    # Paso 1: Inicialización
+    qc.h(range(2*n))
+    qc.x(2*n)
+
+    # Paso 2: Aplicar operador modular controlado
+    for i in range(2*n):
+        qc.cx(i, 2*n)
+        qc.x(i)
+
+    # Paso 3: Aplicar la Transformada Cuántica de Fourier Inversa
+    for i in range(n):
+        for j in range(i):
+            qc.cu1(-np.pi/float(2**(i-j)), j, i+n)
+        qc.h(i)
+
+    # Paso 4: Medir los primeros n qubits
+    qc.measure(range(n), range(n))
+
+    # Ejecutar el circuito cuántico en un simulador local
+    simulator = Aer.get_backend('qasm_simulator')
+    job = execute(qc, simulator, shots=1)
+    result = job.result()
+    counts = result.get_counts(qc)
+    measured_value = int(list(counts.keys())[0], 2)
+
+    # Calcular el valor estimado del factor
+    factor = np.gcd(measured_value, n)
+
+    # Devolver el factor
+    return factor
+
+# Número a factorizar
+n = 15
+
+# Valor inicial para a (debe ser coprimo con n)
+a = 2
+
+# Factorizar utilizando el algoritmo de Shor en paralelo
+factor = shor_parallel(n, a)
+
+# Imprimir el resultado
+print("Factor encontrado:", factor)
